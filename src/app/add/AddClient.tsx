@@ -1,0 +1,333 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import type { Item } from "@/lib/types";
+import { parseNames } from "@/lib/parse";
+
+type AddedEntry = { id: string };
+
+type Toast = {
+  text: string;
+  entryIds: string[];
+};
+
+const LOCATION_LABEL: Record<string, string> = {
+  fridge: "Fridge",
+  freezer: "Freezer",
+  pantry: "Pantry",
+};
+
+// Short buzz on add. Android honours it; iOS ignores it silently.
+function buzz(ms = 30) {
+  try {
+    navigator.vibrate?.(ms);
+  } catch {
+    // Some browsers throw rather than no-op. Not worth surfacing.
+  }
+}
+
+export default function AddClient({ location }: { location: string }) {
+  const [chips, setChips] = useState<Item[]>([]);
+  const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<Item[]>([]);
+  const [pendingCount, setPendingCount] = useState<number | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [toast, setToast] = useState<Toast | null>(null);
+  const [listening, setListening] = useState(false);
+  const [micError, setMicError] = useState<string | null>(null);
+
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Fetching is kept separate from the state writes so both the mount effect
+  // and refresh() can share it without setting state synchronously.
+  const fetchState = useCallback(async () => {
+    const [chipRes, listRes] = await Promise.all([
+      fetch("/api/items", { cache: "no-store" }),
+      fetch("/api/entries?status=pending", { cache: "no-store" }),
+    ]);
+    return {
+      chips: chipRes.ok ? (((await chipRes.json()).items ?? []) as Item[]) : null,
+      pending: listRes.ok
+        ? ((await listRes.json()).entries?.length ?? 0)
+        : null,
+    };
+  }, []);
+
+  const refresh = useCallback(async () => {
+    const state = await fetchState();
+    if (state.chips) setChips(state.chips);
+    if (state.pending !== null) setPendingCount(state.pending);
+  }, [fetchState]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      const state = await fetchState();
+      if (cancelled) return;
+      if (state.chips) setChips(state.chips);
+      if (state.pending !== null) setPendingCount(state.pending);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchState]);
+
+  // Autocomplete against items you've added before.
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) return;
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const res = await fetch(`/api/items?q=${encodeURIComponent(q)}`, {
+        cache: "no-store",
+      });
+      const found = res.ok ? ((await res.json()).items ?? []) : [];
+      if (!cancelled) setSuggestions(found);
+    }, 150);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [query]);
+
+  const onQueryChange = useCallback((value: string) => {
+    setQuery(value);
+    // Clearing here rather than in the effect keeps stale matches from
+    // flashing while you delete back down to one character.
+    if (value.trim().length < 2) setSuggestions([]);
+  }, []);
+
+  const showToast = useCallback((text: string, entryIds: string[]) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ text, entryIds });
+    toastTimer.current = setTimeout(() => setToast(null), 4500);
+  }, []);
+
+  const add = useCallback(
+    async (raw: string) => {
+      const names = parseNames(raw);
+      if (names.length === 0) return;
+
+      setBusy(names[0]);
+      // Optimistically drop tapped chips so a double-tap can't fire twice.
+      setChips((prev) => prev.filter((c) => !names.includes(c.name)));
+
+      try {
+        const res = await fetch("/api/entries", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ names, location }),
+        });
+
+        if (!res.ok) {
+          const { error } = await res.json().catch(() => ({ error: "" }));
+          showToast(error || "Could not add that", []);
+          await refresh();
+          return;
+        }
+
+        const { added } = (await res.json()) as { added: AddedEntry[] };
+        buzz();
+        setQuery("");
+        setSuggestions([]);
+        showToast(
+          names.length === 1 ? `Added ${names[0]}` : `Added ${names.length} items`,
+          added.map((entry) => entry.id),
+        );
+        await refresh();
+      } finally {
+        setBusy(null);
+      }
+    },
+    [location, refresh, showToast],
+  );
+
+  const undo = useCallback(async () => {
+    if (!toast?.entryIds.length) return;
+    await Promise.all(
+      toast.entryIds.map((id) =>
+        fetch(`/api/entries/${id}`, { method: "DELETE" }),
+      ),
+    );
+    setToast(null);
+    await refresh();
+  }, [toast, refresh]);
+
+  const toggleMic = useCallback(() => {
+    if (listening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+
+    const Ctor = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+    if (!Ctor) {
+      setMicError("Voice input isn't supported in this browser.");
+      return;
+    }
+
+    const recognition = new Ctor();
+    recognition.lang = navigator.language || "en-US";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0]?.[0]?.transcript ?? "";
+      if (transcript) void add(transcript);
+    };
+    recognition.onerror = () => setMicError("Didn't catch that.");
+    recognition.onend = () => setListening(false);
+
+    recognitionRef.current = recognition;
+    setMicError(null);
+    setListening(true);
+    recognition.start();
+  }, [listening, add]);
+
+  useEffect(() => () => recognitionRef.current?.abort(), []);
+
+  const label = LOCATION_LABEL[location] ?? "Fridge";
+
+  return (
+    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 pb-40 pt-[max(1.25rem,env(safe-area-inset-top))]">
+      <header className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-accent" />
+          <span className="text-sm font-medium tracking-wide text-muted uppercase">
+            {label}
+          </span>
+        </div>
+        <Link
+          href="/"
+          className="rounded-full bg-surface px-4 py-2 text-sm font-medium text-ink active:bg-surface-2"
+        >
+          List
+          {pendingCount !== null && pendingCount > 0 && (
+            <span className="ml-2 text-accent">{pendingCount}</span>
+          )}
+        </Link>
+      </header>
+
+      <h1 className="mt-6 text-3xl font-semibold tracking-tight">
+        What ran out?
+      </h1>
+
+      {chips.length > 0 && (
+        <div className="mt-6 grid grid-cols-2 gap-3">
+          {chips.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => void add(item.name)}
+              disabled={busy === item.name}
+              className="animate-rise min-h-[76px] rounded-2xl border border-line bg-surface px-4 py-4 text-left text-lg font-medium capitalize leading-tight text-ink transition active:scale-[0.96] active:bg-surface-2 disabled:opacity-40"
+            >
+              {item.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {chips.length === 0 && (
+        <p className="mt-6 rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">
+          Type an item below to get started. The things you add most will show
+          up here as one-tap buttons.
+        </p>
+      )}
+
+      {/* Deliberately not autofocused: a keyboard springing up would cover the
+          chips, which are the fast path. */}
+      <form
+        className="mt-8 flex gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void add(query);
+        }}
+      >
+        <input
+          value={query}
+          onChange={(event) => onQueryChange(event.target.value)}
+          placeholder="Something else…"
+          autoComplete="off"
+          autoCapitalize="none"
+          enterKeyHint="done"
+          className="min-w-0 flex-1 rounded-2xl border border-line bg-surface px-4 py-4 text-lg text-ink outline-none placeholder:text-muted focus:border-accent"
+        />
+        <button
+          type="submit"
+          disabled={!query.trim()}
+          className="rounded-2xl bg-accent px-6 text-lg font-semibold text-accent-ink transition active:scale-95 disabled:opacity-30"
+        >
+          Add
+        </button>
+      </form>
+
+      {suggestions.length > 0 && (
+        <ul className="mt-3 overflow-hidden rounded-2xl border border-line">
+          {suggestions.map((item) => (
+            <li key={item.id}>
+              <button
+                onClick={() => void add(item.name)}
+                className="w-full border-b border-line bg-surface px-4 py-3 text-left text-base capitalize text-ink last:border-b-0 active:bg-surface-2"
+              >
+                {item.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <button
+        onClick={toggleMic}
+        className={`mt-6 flex items-center justify-center gap-3 rounded-2xl border py-4 text-lg font-medium transition active:scale-[0.98] ${
+          listening
+            ? "animate-pulse-ring border-accent bg-accent text-accent-ink"
+            : "border-line bg-surface text-ink"
+        }`}
+      >
+        <MicIcon />
+        {listening ? "Listening…" : "Say it instead"}
+      </button>
+
+      {micError && (
+        <p className="mt-2 text-center text-sm text-muted">{micError}</p>
+      )}
+
+      {toast && (
+        <div className="animate-rise fixed inset-x-4 bottom-[max(1.5rem,env(safe-area-inset-bottom))] mx-auto flex max-w-md items-center justify-between gap-3 rounded-2xl bg-surface-2 px-5 py-4 shadow-lg">
+          <span className="text-base font-medium capitalize">{toast.text}</span>
+          {toast.entryIds.length > 0 && (
+            <button
+              onClick={() => void undo()}
+              className="shrink-0 text-base font-semibold text-accent active:opacity-60"
+            >
+              Undo
+            </button>
+          )}
+        </div>
+      )}
+    </main>
+  );
+}
+
+function MicIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <rect x="9" y="2" width="6" height="12" rx="3" />
+      <path d="M5 11a7 7 0 0 0 14 0M12 18v4" />
+    </svg>
+  );
+}
