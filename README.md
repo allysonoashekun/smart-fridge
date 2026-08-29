@@ -42,7 +42,8 @@ Write → Add a record → URL. There's no reason to build a tag writer.
    Fill in `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from
    Project Settings → API. Use the **service_role** key, not the anon key — it's
    only ever read server-side in API routes. `ANTHROPIC_API_KEY` is needed only
-   for `/recipes`.
+   for `/recipes`. `APP_PASSPHRASE` is **required** — without it the app stays
+   locked (see Notes).
 
 3. **Run it:**
 
@@ -61,11 +62,31 @@ Write → Add a record → URL. There's no reason to build a tag writer.
 
 ## Notes
 
-**There's no auth.** This is a single-user hobby app: RLS is off and every query
-goes through server-side API routes holding the service key. Anyone with the URL
-can edit the list. If that matters, put Vercel password protection in front of
-it, or add a shared-secret cookie check — but don't spend the day on a login
-flow.
+**Access control.** Every page and API route sits behind
+[`src/middleware.ts`](src/middleware.ts), which requires a session cookie. You
+unlock a device once at `/unlock` by typing `APP_PASSPHRASE`, and the cookie
+lasts 400 days — the browser maximum — so you never see the screen again on that
+phone.
+
+The cookie holds an HMAC of a fixed string keyed by the passphrase, not the
+passphrase itself. It's deterministic, which means **changing `APP_PASSPHRASE`
+signs out every device at once** — that's your revoke button if a phone is lost.
+
+If the app is misconfigured it fails *closed*: with no `APP_PASSPHRASE` set,
+everything is locked rather than public.
+
+**One-tap unlock from the tag (optional).** Set `TAG_KEY` and write the tag as
+`/add?loc=fridge&k=<TAG_KEY>`. A tap then mints the session with nothing to
+type, and the middleware immediately redirects to the clean URL so the key never
+lingers in history or a referrer header. The tradeoff is that anyone who taps
+that tag with their own phone is in — reasonable when the tag is inside your
+kitchen, but leave `TAG_KEY` unset if you'd rather type the passphrase once per
+device.
+
+This is a single-user design: there are no accounts, RLS is off, and every query
+runs through server-side routes holding the service key. If you later want a
+shared household list with per-person history, that's the point to move to
+Supabase Auth rather than extend this.
 
 **Why a database rather than `localStorage`.** On iOS, an installed home-screen
 PWA has *separate* storage from Safari — and an NFC tap opens Safari. A
