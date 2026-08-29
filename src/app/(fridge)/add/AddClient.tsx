@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Item } from "@/lib/types";
 import { parseNames } from "@/lib/parse";
+import { wobbleClass } from "@/lib/wobble";
+import PaperNote from "@/components/PaperNote";
 
 type AddedEntry = { id: string };
 
@@ -194,116 +196,122 @@ export default function AddClient({ location }: { location: string }) {
   const label = LOCATION_LABEL[location] ?? "Fridge";
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 pb-40 pt-[max(1.25rem,env(safe-area-inset-top))]">
-      <header className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-accent" />
-          <span className="text-sm font-medium tracking-wide text-muted uppercase">
-            {label}
-          </span>
-        </div>
-        <Link
-          href="/"
-          className="rounded-full bg-surface px-4 py-2 text-sm font-medium text-ink active:bg-surface-2"
-        >
-          List
-          {pendingCount !== null && pendingCount > 0 && (
-            <span className="ml-2 text-accent">{pendingCount}</span>
-          )}
-        </Link>
-      </header>
+    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pb-16 pt-[max(1.5rem,env(safe-area-inset-top))]">
+      <PaperNote pin="circle" rotate="rotate-[0.5deg]">
+        <header className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-paper-ink" />
+            <span className="text-sm font-medium tracking-wide text-paper-muted uppercase">
+              {label}
+            </span>
+          </div>
+          <Link
+            href="/"
+            className="rounded-full bg-paper-ink/8 px-4 py-2 text-sm font-medium text-paper-ink active:bg-paper-ink/14"
+          >
+            List
+            {pendingCount !== null && pendingCount > 0 && (
+              <span className="ml-2 font-semibold text-paper-ink">
+                {pendingCount}
+              </span>
+            )}
+          </Link>
+        </header>
 
-      <h1 className="mt-6 text-3xl font-semibold tracking-tight">
-        What ran out?
-      </h1>
+        <h1 className="mt-6 text-3xl font-semibold tracking-tight text-paper-ink">
+          What ran out?
+        </h1>
 
-      {chips.length > 0 && (
-        <div className="mt-6 grid grid-cols-2 gap-3">
-          {chips.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => void add(item.name)}
-              disabled={busy === item.name}
-              className="animate-rise min-h-[76px] rounded-2xl border border-line bg-surface px-4 py-4 text-left text-lg font-medium capitalize leading-tight text-ink transition active:scale-[0.96] active:bg-surface-2 disabled:opacity-40"
-            >
-              {item.name}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {chips.length === 0 && (
-        <p className="mt-6 rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">
-          Type an item below to get started. The things you add most will show
-          up here as one-tap buttons.
-        </p>
-      )}
-
-      {/* Deliberately not autofocused: a keyboard springing up would cover the
-          chips, which are the fast path. */}
-      <form
-        className="mt-8 flex gap-2"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void add(query);
-        }}
-      >
-        <input
-          value={query}
-          onChange={(event) => onQueryChange(event.target.value)}
-          placeholder="Something else…"
-          autoComplete="off"
-          autoCapitalize="none"
-          enterKeyHint="done"
-          className="min-w-0 flex-1 rounded-2xl border border-line bg-surface px-4 py-4 text-lg text-ink outline-none placeholder:text-muted focus:border-accent"
-        />
-        <button
-          type="submit"
-          disabled={!query.trim()}
-          className="rounded-2xl bg-accent px-6 text-lg font-semibold text-accent-ink transition active:scale-95 disabled:opacity-30"
-        >
-          Add
-        </button>
-      </form>
-
-      {suggestions.length > 0 && (
-        <ul className="mt-3 overflow-hidden rounded-2xl border border-line">
-          {suggestions.map((item) => (
-            <li key={item.id}>
+        {chips.length > 0 && (
+          <div className="mt-6 grid grid-cols-2 gap-3">
+            {chips.map((item) => (
               <button
+                key={item.id}
                 onClick={() => void add(item.name)}
-                className="w-full border-b border-line bg-surface px-4 py-3 text-left text-base capitalize text-ink last:border-b-0 active:bg-surface-2"
+                disabled={busy === item.name}
+                className={`animate-rise min-h-[76px] rounded-lg bg-white/85 px-4 py-4 text-left text-lg font-medium capitalize leading-tight text-paper-ink shadow-[0_4px_10px_-3px_rgba(0,0,0,0.25)] transition active:scale-[0.96] active:bg-white/70 disabled:opacity-40 ${wobbleClass(item.name)}`}
               >
                 {item.name}
               </button>
-            </li>
-          ))}
-        </ul>
-      )}
+            ))}
+          </div>
+        )}
 
-      <button
-        onClick={toggleMic}
-        className={`mt-6 flex items-center justify-center gap-3 rounded-2xl border py-4 text-lg font-medium transition active:scale-[0.98] ${
-          listening
-            ? "animate-pulse-ring border-accent bg-accent text-accent-ink"
-            : "border-line bg-surface text-ink"
-        }`}
-      >
-        <MicIcon />
-        {listening ? "Listening…" : "Say it instead"}
-      </button>
+        {chips.length === 0 && (
+          <p className="mt-6 rounded-lg border border-dashed border-paper-line px-4 py-6 text-center text-sm text-paper-muted">
+            Type an item below to get started. The things you add most will
+            show up here as one-tap buttons.
+          </p>
+        )}
 
-      {micError && (
-        <p className="mt-2 text-center text-sm text-muted">{micError}</p>
-      )}
+        {/* Deliberately not autofocused: a keyboard springing up would cover the
+            chips, which are the fast path. */}
+        <form
+          className="mt-8 flex gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void add(query);
+          }}
+        >
+          <input
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder="Something else…"
+            autoComplete="off"
+            autoCapitalize="none"
+            enterKeyHint="done"
+            className="min-w-0 flex-1 rounded-2xl border border-paper-line bg-white/70 px-4 py-4 text-lg text-paper-ink outline-none placeholder:text-paper-muted focus:border-paper-ink"
+          />
+          <button
+            type="submit"
+            disabled={!query.trim()}
+            className="rounded-2xl bg-accent px-6 text-lg font-semibold text-accent-ink shadow-[0_4px_10px_-3px_rgba(0,0,0,0.25)] transition active:scale-95 disabled:opacity-30"
+          >
+            Add
+          </button>
+        </form>
+
+        {suggestions.length > 0 && (
+          <ul className="mt-3 overflow-hidden rounded-2xl border border-paper-line">
+            {suggestions.map((item) => (
+              <li key={item.id}>
+                <button
+                  onClick={() => void add(item.name)}
+                  className="w-full border-b border-paper-line bg-white/70 px-4 py-3 text-left text-base capitalize text-paper-ink last:border-b-0 active:bg-white/50"
+                >
+                  {item.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <button
+          onClick={toggleMic}
+          className={`mt-6 flex items-center justify-center gap-3 rounded-2xl border py-4 text-lg font-medium transition active:scale-[0.98] ${
+            listening
+              ? "animate-pulse-ring border-accent bg-accent text-accent-ink"
+              : "border-paper-line bg-white/70 text-paper-ink"
+          }`}
+        >
+          <MicIcon />
+          {listening ? "Listening…" : "Say it instead"}
+        </button>
+
+        {micError && (
+          <p className="mt-2 text-center text-sm text-paper-muted">
+            {micError}
+          </p>
+        )}
+      </PaperNote>
 
       {toast && (
-        <div className="animate-rise fixed inset-x-4 bottom-[max(1.5rem,env(safe-area-inset-bottom))] mx-auto flex max-w-md items-center justify-between gap-3 rounded-2xl bg-surface-2 px-5 py-4 shadow-lg">
+        <div className="animate-rise fixed inset-x-4 bottom-[max(1.5rem,env(safe-area-inset-bottom))] mx-auto flex max-w-md items-center justify-between gap-3 rounded-2xl bg-paper px-5 py-4 text-paper-ink shadow-[0_10px_22px_-6px_rgba(0,0,0,0.5)]">
           <span className="text-base font-medium capitalize">{toast.text}</span>
           {toast.entryIds.length > 0 && (
             <button
               onClick={() => void undo()}
-              className="shrink-0 text-base font-semibold text-accent active:opacity-60"
+              className="shrink-0 text-base font-semibold text-paper-ink underline underline-offset-4 active:opacity-60"
             >
               Undo
             </button>

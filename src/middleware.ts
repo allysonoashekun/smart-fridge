@@ -81,9 +81,13 @@ function deny(req: NextRequest, message = "Locked.") {
 }
 
 export const config = {
-  // Everything except build assets and the PWA icons/manifest, which must stay
-  // reachable or install-to-home-screen breaks.
+  // Everything except build assets, the PWA icons/manifest, and the fridge
+  // background/magnet photos -- all static, none of it sensitive, and gating
+  // it behind the session check just breaks CSS background-image loads that
+  // don't happen to carry a valid cookie (which is what "background renders
+  // black" turned out to be: the browser got a 307 to /unlock instead of a
+  // JPEG and silently failed to render it).
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|icon-192\\.png|icon-512\\.png|icon-maskable-512\\.png|apple-touch-icon\\.png).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|icon-192\\.png|icon-512\\.png|icon-maskable-512\\.png|apple-touch-icon\\.png|fridge/.*).*)",
   ],
 };

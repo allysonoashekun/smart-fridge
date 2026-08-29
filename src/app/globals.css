@@ -7,10 +7,25 @@
   --color-line: #2b3138;
   --color-ink: #f2f5f7;
   --color-muted: #8b959f;
-  --color-accent: #4ade80;
-  --color-accent-ink: #052e16;
+  --color-accent: #ffffff;
+  --color-accent-ink: #2a241c;
+
+  /* The fridge-door skin: /, /add and /recipes sit on paper and steel rather
+     than the dark surface above. /unlock keeps the dark tokens untouched. */
+  --color-paper: #f5efe1;
+  --color-paper-ink: #2a241c;
+  --color-paper-muted: #8a8073;
+  --color-paper-line: #ddd3ba;
 
   --font-sans: ui-sans-serif, -apple-system, "SF Pro Text", system-ui, sans-serif;
+}
+
+/* `inline` because --font-schoolbell isn't a theme value: next/font defines it
+   on <html> (see app/layout.tsx). A plain @theme block would emit
+   font-hand utilities pointing at a --font-hand indirection that Tailwind
+   can't see through; inline resolves to the real variable here. */
+@theme inline {
+  --font-hand: var(--font-schoolbell), ui-sans-serif, system-ui, sans-serif;
 }
 
 html {
@@ -19,10 +34,17 @@ html {
   overscroll-behavior-y: none;
 }
 
+/* Handwriting is the default for every screen, including /unlock -- Tailwind's
+   preflight makes buttons and inputs inherit it too, so anything typed into
+   the list lands in the same pen. The exception is the label on a control you
+   press: those carry `font-sans` at the call site (the nav pills, the Add /
+   Unlock / mic / Undo / Try again buttons). Text that merely lives inside a
+   <button> for tap-target reasons -- grocery rows, quick-add chips, recipe
+   titles -- is list content, not a control label, and stays handwritten. */
 body {
   background: var(--color-bg);
   color: var(--color-ink);
-  font-family: var(--font-sans);
+  font-family: var(--font-hand);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -54,11 +76,40 @@ button {
   animation: rise 200ms ease-out;
 }
 
+/* Ink rather than the accent: a white ring would be invisible against both the
+   white mic button it wraps and the cream paper behind it. */
 @keyframes pulse-ring {
-  0% { box-shadow: 0 0 0 0 rgb(74 222 128 / 0.45); }
-  100% { box-shadow: 0 0 0 18px rgb(74 222 128 / 0); }
+  0% { box-shadow: 0 0 0 0 rgb(42 36 28 / 0.28); }
+  100% { box-shadow: 0 0 0 18px rgb(42 36 28 / 0); }
 }
 
 .animate-pulse-ring {
   animation: pulse-ring 1.4s ease-out infinite;
+}
+
+/* --- Fridge door decoration ------------------------------------------- */
+
+/* box-shadow only ever draws around an element's rectangular box, even after
+   clip-path cuts it down to a star or circle -- so shaped magnets use a
+   drop-shadow filter instead, which follows the clipped silhouette. */
+.magnet-shadow {
+  filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.4));
+}
+
+/* Same idea, sized for the larger paper note -- a heavier, softer drop-shadow
+   that follows the torn-sheet PNG's own transparent silhouette rather than
+   its full rectangular bounding box. */
+.paper-shadow {
+  filter: drop-shadow(0 16px 26px rgb(0 0 0 / 0.45));
+}
+
+/* Faint ruled lines under the grocery list, like a real paper pad. */
+.paper-ruled {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 51px,
+    var(--color-paper-line) 51px,
+    var(--color-paper-line) 52px
+  );
 }
