@@ -26,7 +26,6 @@
    can't see through; inline resolves to the real variable here. */
 @theme inline {
   --font-hand: var(--font-schoolbell), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-cal-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 html {
@@ -58,12 +57,9 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Page titles are the one thing that isn't handwritten, and they sit centred on
-   the sheet. Applied to the element rather than a utility at each call site so
-   a new screen's <h1> is already in the right face and the right place. Cal
-   Sans has a single 400 weight -- don't reach for font-medium/semibold on a
-   heading, the class would win over this rule and synthesise a bold that the
-   face wasn't drawn for.
+/* Page titles are handwritten like everything else, and sit centred on the
+   sheet. Centred on the element rather than a utility at each call site so a
+   new screen's <h1> is already in the right place.
 
    text-align only centres a title that spans the note's full content width, so
    a heading must not share a flex row with a nav pill -- give the pill its own
@@ -71,8 +67,6 @@ body {
    sheet's interior is ~220px and a title runs to ~200px, so a title and a pill
    on one row overlap. */
 h1 {
-  font-family: var(--font-display);
-  font-weight: 400;
   text-align: center;
 }
 
