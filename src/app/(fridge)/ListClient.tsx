@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import type { Category, ListEntry } from "@/lib/types";
-import { CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
+import type { ListEntry } from "@/lib/types";
 import PaperNote from "@/components/PaperNote";
 
 export default function ListClient() {
@@ -60,27 +59,21 @@ export default function ListClient() {
     await fetch(`/api/entries/${id}`, { method: "DELETE" });
   }, []);
 
-  const grouped = groupByCategory(entries ?? []);
-  const count = entries?.length ?? 0;
-
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pt-[max(1.5rem,env(safe-area-inset-top))] pb-32">
-      <PaperNote pin="star" rotate="-rotate-[0.5deg]">
-        <header className="flex items-center justify-between">
-          <h1 className="text-3xl font-semibold tracking-tight text-paper-ink">
-            List
-            {count > 0 && (
-              <span className="ml-2 text-xl font-normal text-paper-muted">
-                {count}
-              </span>
-            )}
+    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pt-[calc(max(1.5rem,env(safe-area-inset-top))_+_var(--fridge-drop))] pb-32">
+      <PaperNote>
+        <header>
+          <div className="flex justify-end">
+            <Link
+              href="/recipes"
+              className="rounded-full bg-paper-ink/8 px-4 py-2 text-sm font-medium text-paper-ink active:bg-paper-ink/14"
+            >
+              Recipes
+            </Link>
+          </div>
+          <h1 className="mt-3 text-3xl tracking-tight text-paper-ink">
+            Groceries
           </h1>
-          <Link
-            href="/recipes"
-            className="rounded-full bg-paper-ink/8 px-4 py-2 text-sm font-medium text-paper-ink active:bg-paper-ink/14"
-          >
-            Recipes
-          </Link>
         </header>
 
         {entries === null && (
@@ -89,7 +82,7 @@ export default function ListClient() {
           </p>
         )}
 
-        {entries !== null && count === 0 && (
+        {entries !== null && entries.length === 0 && (
           <div className="mt-16 text-center">
             <p className="text-lg font-medium text-paper-ink">
               Nothing on the list.
@@ -100,61 +93,50 @@ export default function ListClient() {
           </div>
         )}
 
-        <div className="mt-6 space-y-7">
-          {CATEGORY_ORDER.filter((category) => grouped[category]?.length).map(
-            (category) => (
-              <section key={category}>
-                <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-paper-muted">
-                  {CATEGORY_LABEL[category]}
-                </h2>
-                <ul>
-                  {grouped[category].map((entry) => (
-                    <li
-                      key={entry.id}
-                      className="flex items-center border-b border-paper-line last:border-b-0"
-                    >
-                      <button
-                        onClick={() => void check(entry.id)}
-                        className="flex flex-1 items-center gap-3 py-3.5 text-left active:bg-paper-ink/5"
-                      >
-                        <span
-                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition ${
-                            leaving.has(entry.id)
-                              ? "border-accent bg-accent text-accent-ink"
-                              : "border-paper-muted/40"
-                          }`}
-                        >
-                          {leaving.has(entry.id) && <CheckIcon />}
-                        </span>
-                        <span
-                          className={`text-lg capitalize transition ${
-                            leaving.has(entry.id)
-                              ? "text-paper-muted line-through"
-                              : "text-paper-ink"
-                          }`}
-                        >
-                          {entry.items.name}
-                          {entry.qty_text && (
-                            <span className="ml-2 text-sm text-paper-muted">
-                              {entry.qty_text}
-                            </span>
-                          )}
-                        </span>
-                      </button>
-                      <button
-                        onClick={() => void remove(entry.id)}
-                        aria-label={`Remove ${entry.items.name}`}
-                        className="py-3.5 pl-3 text-paper-muted active:text-paper-ink"
-                      >
-                        <XIcon />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ),
-          )}
-        </div>
+        <ul className="mt-6">
+          {(entries ?? []).map((entry) => (
+            <li
+              key={entry.id}
+              className="flex items-center border-b border-paper-line last:border-b-0"
+            >
+              <button
+                onClick={() => void check(entry.id)}
+                className="flex flex-1 items-center gap-3 py-2.5 text-left active:bg-paper-ink/5"
+              >
+                <span
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition ${
+                    leaving.has(entry.id)
+                      ? "border-accent bg-accent text-accent-ink"
+                      : "border-paper-muted/40"
+                  }`}
+                >
+                  {leaving.has(entry.id) && <CheckIcon />}
+                </span>
+                <span
+                  className={`text-lg capitalize transition ${
+                    leaving.has(entry.id)
+                      ? "text-paper-muted line-through"
+                      : "text-paper-ink"
+                  }`}
+                >
+                  {entry.items.name}
+                  {entry.qty_text && (
+                    <span className="ml-2 text-sm text-paper-muted">
+                      {entry.qty_text}
+                    </span>
+                  )}
+                </span>
+              </button>
+              <button
+                onClick={() => void remove(entry.id)}
+                aria-label={`Remove ${entry.items.name}`}
+                className="py-2.5 pl-3 text-paper-muted active:text-paper-ink"
+              >
+                <XIcon />
+              </button>
+            </li>
+          ))}
+        </ul>
       </PaperNote>
 
       <Link
@@ -165,15 +147,6 @@ export default function ListClient() {
       </Link>
     </main>
   );
-}
-
-function groupByCategory(entries: ListEntry[]): Record<Category, ListEntry[]> {
-  const grouped = {} as Record<Category, ListEntry[]>;
-  for (const entry of entries) {
-    const category = (entry.items.category ?? "other") as Category;
-    (grouped[category] ??= []).push(entry);
-  }
-  return grouped;
 }
 
 function CheckIcon() {

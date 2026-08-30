@@ -95,11 +95,11 @@ local-only list would silently split into two lists that never see each other.
 ## Layout
 
 ```
-src/app/add/        the NFC landing screen — chips, autocomplete, voice
+src/app/add/        the NFC landing screen — chips, autocomplete
 src/app/            the list, grouped into store aisles
 src/app/recipes/    meal suggestions from the pending list
 src/app/api/        entries, items, recipes
-src/lib/            supabase client, category guessing, name parsing
+src/lib/            supabase client, name parsing
 supabase/schema.sql tables + the add_item / top_items functions
 scripts/            npx tsx scripts/check-logic.ts
 ```

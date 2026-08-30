@@ -26,12 +26,22 @@
    can't see through; inline resolves to the real variable here. */
 @theme inline {
   --font-hand: var(--font-schoolbell), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-cal-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 html {
   background: var(--color-bg);
   /* Keep the app from bouncing like a web page when it's on the home screen. */
   overscroll-behavior-y: none;
+}
+
+/* How far down the whole fridge door sits. Every fixed thing on the door --
+   the decorative magnets in FridgeScene and the top padding that carries the
+   paper note and its contents on /, /add and /recipes -- offsets by this one
+   value, so the scene keeps its internal spacing and moves as a piece. Change
+   it here rather than nudging any single element. */
+:root {
+  --fridge-drop: 3rem;
 }
 
 /* Handwriting is the default for every screen, including /unlock -- Tailwind's
@@ -46,6 +56,24 @@ body {
   color: var(--color-ink);
   font-family: var(--font-hand);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Page titles are the one thing that isn't handwritten, and they sit centred on
+   the sheet. Applied to the element rather than a utility at each call site so
+   a new screen's <h1> is already in the right face and the right place. Cal
+   Sans has a single 400 weight -- don't reach for font-medium/semibold on a
+   heading, the class would win over this rule and synthesise a bold that the
+   face wasn't drawn for.
+
+   text-align only centres a title that spans the note's full content width, so
+   a heading must not share a flex row with a nav pill -- give the pill its own
+   line above (see AddClient, ListClient, RecipesClient). At phone widths the
+   sheet's interior is ~220px and a title runs to ~200px, so a title and a pill
+   on one row overlap. */
+h1 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  text-align: center;
 }
 
 /* No blue flash on tap -- the pressed states below do the feedback instead. */
@@ -74,17 +102,6 @@ button {
 
 .animate-rise {
   animation: rise 200ms ease-out;
-}
-
-/* Ink rather than the accent: a white ring would be invisible against both the
-   white mic button it wraps and the cream paper behind it. */
-@keyframes pulse-ring {
-  0% { box-shadow: 0 0 0 0 rgb(42 36 28 / 0.28); }
-  100% { box-shadow: 0 0 0 18px rgb(42 36 28 / 0); }
-}
-
-.animate-pulse-ring {
-  animation: pulse-ring 1.4s ease-out infinite;
 }
 
 /* --- Fridge door decoration ------------------------------------------- */

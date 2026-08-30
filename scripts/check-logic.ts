@@ -4,7 +4,6 @@
  */
 import assert from "node:assert/strict";
 import { parseNames } from "../src/lib/parse";
-import { guessCategory } from "../src/lib/categories";
 import { safeEqual, safeNext, sessionToken } from "../src/lib/auth";
 
 // --- parseNames -----------------------------------------------------------
@@ -24,18 +23,6 @@ assert.deepEqual(parseNames("   "), []);
 assert.deepEqual(parseNames("bread\nmilk;jam"), ["bread", "milk", "jam"]);
 // "and" inside a word must not split it.
 assert.deepEqual(parseNames("sandwich bags"), ["sandwich bags"]);
-
-// --- guessCategory --------------------------------------------------------
-assert.equal(guessCategory("whole milk"), "dairy");
-assert.equal(guessCategory("Sourdough Bread"), "bakery");
-assert.equal(guessCategory("chicken thighs"), "meat");
-assert.equal(guessCategory("bananas"), "produce");
-assert.equal(guessCategory("olive oil"), "pantry");
-assert.equal(guessCategory("dish soap"), "household");
-assert.equal(guessCategory("wombat"), "other");
-// Longest keyword wins, so these don't fall to the wrong aisle.
-assert.equal(guessCategory("ice cream"), "frozen");
-assert.equal(guessCategory("tomato paste"), "pantry");
 
 // --- safeNext (open-redirect guard) --------------------------------------
 assert.equal(safeNext("/add?loc=fridge"), "/add?loc=fridge");

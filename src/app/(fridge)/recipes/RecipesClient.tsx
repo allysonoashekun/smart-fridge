@@ -64,21 +64,26 @@ export default function RecipesClient() {
   }, []);
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pb-16 pt-[max(1.5rem,env(safe-area-inset-top))]">
-      <PaperNote pin="star" rotate="rotate-[0.3deg]">
-        <header className="flex items-center justify-between">
-          <h1 className="text-3xl font-semibold tracking-tight text-paper-ink">
+    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pb-16 pt-[calc(max(1.5rem,env(safe-area-inset-top))_+_var(--fridge-drop))]">
+      <PaperNote>
+        <header>
+          <div className="flex justify-end">
+            <Link
+              href="/"
+              className="rounded-full bg-paper-ink/8 px-4 py-2 text-sm font-medium text-paper-ink active:bg-paper-ink/14"
+            >
+              List
+            </Link>
+          </div>
+          <h1 className="mt-3 text-3xl tracking-tight text-paper-ink">
             Cook this
           </h1>
-          <Link
-            href="/"
-            className="rounded-full bg-paper-ink/8 px-4 py-2 text-sm font-medium text-paper-ink active:bg-paper-ink/14"
-          >
-            List
-          </Link>
         </header>
 
-        <p className="mt-2 text-sm text-paper-muted">
+        {/* Centred with the title above it -- this line is the title's deck,
+            not body copy, and left-aligning it under a centred h1 reads as a
+            layout bug. */}
+        <p className="mt-2 text-center text-sm text-paper-muted">
           Meals you&apos;ll be able to make once you&apos;ve done this shop.
         </p>
 

@@ -14,12 +14,6 @@ type Toast = {
   entryIds: string[];
 };
 
-const LOCATION_LABEL: Record<string, string> = {
-  fridge: "Fridge",
-  freezer: "Freezer",
-  pantry: "Pantry",
-};
-
 // Short buzz on add. Android honours it; iOS ignores it silently.
 function buzz(ms = 30) {
   try {
@@ -36,10 +30,7 @@ export default function AddClient({ location }: { location: string }) {
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
-  const [listening, setListening] = useState(false);
-  const [micError, setMicError] = useState<string | null>(null);
 
-  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetching is kept separate from the state writes so both the mount effect
@@ -161,50 +152,10 @@ export default function AddClient({ location }: { location: string }) {
     await refresh();
   }, [toast, refresh]);
 
-  const toggleMic = useCallback(() => {
-    if (listening) {
-      recognitionRef.current?.stop();
-      return;
-    }
-
-    const Ctor = window.SpeechRecognition ?? window.webkitSpeechRecognition;
-    if (!Ctor) {
-      setMicError("Voice input isn't supported in this browser.");
-      return;
-    }
-
-    const recognition = new Ctor();
-    recognition.lang = navigator.language || "en-US";
-    recognition.continuous = false;
-    recognition.interimResults = false;
-
-    recognition.onresult = (event) => {
-      const transcript = event.results[0]?.[0]?.transcript ?? "";
-      if (transcript) void add(transcript);
-    };
-    recognition.onerror = () => setMicError("Didn't catch that.");
-    recognition.onend = () => setListening(false);
-
-    recognitionRef.current = recognition;
-    setMicError(null);
-    setListening(true);
-    recognition.start();
-  }, [listening, add]);
-
-  useEffect(() => () => recognitionRef.current?.abort(), []);
-
-  const label = LOCATION_LABEL[location] ?? "Fridge";
-
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pb-16 pt-[max(1.5rem,env(safe-area-inset-top))]">
-      <PaperNote pin="circle" rotate="rotate-[0.5deg]">
-        <header className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-paper-ink" />
-            <span className="text-sm font-medium tracking-wide text-paper-muted uppercase">
-              {label}
-            </span>
-          </div>
+    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pb-16 pt-[calc(max(1.5rem,env(safe-area-inset-top))_+_var(--fridge-drop))]">
+      <PaperNote>
+        <header className="flex items-center justify-end">
           <Link
             href="/"
             className="rounded-full bg-paper-ink/8 px-4 py-2 text-sm font-medium text-paper-ink active:bg-paper-ink/14"
@@ -218,7 +169,7 @@ export default function AddClient({ location }: { location: string }) {
           </Link>
         </header>
 
-        <h1 className="mt-6 text-3xl font-semibold tracking-tight text-paper-ink">
+        <h1 className="mt-6 text-3xl tracking-tight text-paper-ink">
           What ran out?
         </h1>
 
@@ -235,13 +186,6 @@ export default function AddClient({ location }: { location: string }) {
               </button>
             ))}
           </div>
-        )}
-
-        {chips.length === 0 && (
-          <p className="mt-6 rounded-lg border border-dashed border-paper-line px-4 py-6 text-center text-sm text-paper-muted">
-            Type an item below to get started. The things you add most will
-            show up here as one-tap buttons.
-          </p>
         )}
 
         {/* Deliberately not autofocused: a keyboard springing up would cover the
@@ -285,24 +229,6 @@ export default function AddClient({ location }: { location: string }) {
             ))}
           </ul>
         )}
-
-        <button
-          onClick={toggleMic}
-          className={`mt-6 flex items-center justify-center gap-3 rounded-2xl border py-4 text-lg font-medium transition active:scale-[0.98] ${
-            listening
-              ? "animate-pulse-ring border-accent bg-accent text-accent-ink"
-              : "border-paper-line bg-white/70 text-paper-ink"
-          }`}
-        >
-          <MicIcon />
-          {listening ? "Listening…" : "Say it instead"}
-        </button>
-
-        {micError && (
-          <p className="mt-2 text-center text-sm text-paper-muted">
-            {micError}
-          </p>
-        )}
       </PaperNote>
 
       {toast && (
@@ -319,23 +245,5 @@ export default function AddClient({ location }: { location: string }) {
         </div>
       )}
     </main>
-  );
-}
-
-function MicIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      aria-hidden="true"
-    >
-      <rect x="9" y="2" width="6" height="12" rx="3" />
-      <path d="M5 11a7 7 0 0 0 14 0M12 18v4" />
-    </svg>
   );
 }

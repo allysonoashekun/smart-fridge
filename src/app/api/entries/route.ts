@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { guessCategory } from "@/lib/categories";
 import { parseNames } from "@/lib/parse";
 import { route } from "@/lib/api";
 
@@ -51,7 +50,6 @@ export const POST = route(async (req: Request) => {
     const { data, error } = await supabase
       .rpc("add_item", {
         p_name: itemName,
-        p_category: guessCategory(itemName),
         p_location: location ?? null,
         p_qty: requested.length === 1 ? (qty ?? null) : null,
       })

@@ -9,24 +9,29 @@ import Image from "next/image";
 //
 // Positioned with `fixed` (not `absolute`) so they stay stuck to the fridge
 // rather than scrolling away with a long list or a long recipe.
+//
+// Each one carries --fridge-drop (globals.css) on top of its own offset -- the
+// same value the pages add to their top padding -- so the magnets travel with
+// the note instead of drifting out of the arrangement when the scene moves.
 const MAGNETS = [
   {
     src: "/fridge/magnet-1.png",
     width: 64,
     height: 70,
-    position: "top-8 left-5 -rotate-12",
+    position: "top-[calc(2rem_+_var(--fridge-drop))] left-5 -rotate-12",
   },
   {
     src: "/fridge/magnet-3.png",
     width: 64,
     height: 59,
-    position: "top-24 right-4 rotate-6",
+    position: "top-[calc(6rem_+_var(--fridge-drop))] right-4 rotate-6",
   },
   {
     src: "/fridge/magnet-2.png",
     width: 72,
     height: 68,
-    position: "top-1/2 left-6 -translate-y-1/2 -rotate-6",
+    position:
+      "top-1/2 left-6 translate-y-[calc(-50%_+_var(--fridge-drop))] -rotate-6",
   },
 ];
 

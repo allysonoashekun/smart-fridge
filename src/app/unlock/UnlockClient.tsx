@@ -39,7 +39,7 @@ export default function UnlockClient({ next }: { next: string }) {
         <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface">
           <LockIcon />
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight">Fridge</h1>
+        <h1 className="text-2xl tracking-tight">Fridge</h1>
         <p className="mt-2 text-sm text-muted">
           Unlock once and this phone stays signed in.
         </p>

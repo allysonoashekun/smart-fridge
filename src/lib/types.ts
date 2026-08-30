@@ -1,17 +1,6 @@
-export type Category =
-  | "produce"
-  | "bakery"
-  | "dairy"
-  | "meat"
-  | "frozen"
-  | "pantry"
-  | "household"
-  | "other";
-
 export type Item = {
   id: string;
   name: string;
-  category: Category;
   add_count: number;
   last_added_at: string | null;
 };

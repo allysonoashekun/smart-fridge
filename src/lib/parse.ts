@@ -1,5 +1,5 @@
 /**
- * Split a spoken or typed phrase into individual item names.
+ * Split a typed phrase into individual item names.
  * "milk, eggs and some oat flour" -> ["milk", "eggs", "some oat flour"]
  */
 export function parseNames(input: string): string[] {

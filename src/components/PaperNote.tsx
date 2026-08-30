@@ -1,32 +1,20 @@
 import Image from "next/image";
 
-type Pin = "star" | "circle";
-
-// The star is the app's pin: it holds up both the list and the recipes note,
-// so navigating between them doesn't swap the magnet out from under the page.
-// /add gets its own, reusing a misc decorative magnet from FridgeScene so we
-// don't need an extra asset file just for that pin.
+// The star is *the* pin: one magnet holds up every note in the app, so moving
+// between the list, the recipes and /add never swaps it out from under the
+// page. It's deliberately not configurable per page -- the fridge reads as one
+// scene, and a pin that changes on navigation reads as a glitch. Per-page
+// variety belongs in FridgeScene's decorative magnets instead.
 //
-// Both are real transparent PNG cutouts, so they render as-is: their own
-// alpha silhouette, no forced CSS shape. Width/height below match each
-// current file's aspect ratio so the browser doesn't stretch it; if you swap
-// in a differently-shaped PNG, adjust these two numbers to match.
-const PIN: Record<
-  Pin,
-  { src: string; width: number; height: number; rotate: string }
-> = {
-  star: {
-    src: "/fridge/magnet-pin.png",
-    width: 72,
-    height: 64, // matches magnet-pin.png's own aspect ratio (114x101)
-    rotate: "-rotate-6",
-  },
-  circle: {
-    src: "/fridge/magnet-1.png",
-    width: 56,
-    height: 61, // matches magnet-1.png's own aspect ratio (92x100)
-    rotate: "rotate-3",
-  },
+// It's a real transparent PNG cutout, so it renders as-is: its own alpha
+// silhouette, no forced CSS shape. Width/height below match the current
+// file's aspect ratio so the browser doesn't stretch it; if you swap in a
+// differently-shaped PNG, adjust these two numbers to match.
+const PIN = {
+  src: "/fridge/magnet-pin.png",
+  width: 72,
+  height: 64, // matches magnet-pin.png's own aspect ratio (114x101)
+  rotate: "-rotate-6",
 };
 
 // paper.png is not a card: it's a finished 275x350 graphic of one torn sheet
@@ -45,36 +33,29 @@ const PIN: Record<
 const SHEET_INSET = "pt-[13%] pr-[16%] pb-[14%] pl-[22%]";
 
 export default function PaperNote({
-  pin,
-  rotate = "-rotate-[0.4deg]",
   className = "",
   children,
 }: {
-  pin: Pin;
-  /** A small fixed tilt for the paper itself -- keep this subtle. */
-  rotate?: string;
   className?: string;
   children: React.ReactNode;
 }) {
-  const config = PIN[pin];
-
   return (
     <div className="relative">
       <div
         aria-hidden="true"
-        className={`magnet-shadow pointer-events-none absolute -top-4 left-1/2 z-10 -translate-x-1/2 ${config.rotate}`}
+        className={`magnet-shadow pointer-events-none absolute -top-4 left-1/2 z-10 -translate-x-1/2 ${PIN.rotate}`}
       >
         <Image
-          src={config.src}
+          src={PIN.src}
           alt=""
-          width={config.width}
-          height={config.height}
+          width={PIN.width}
+          height={PIN.height}
           className="block"
         />
       </div>
 
       <div
-        className={`paper-shadow relative aspect-[275/350] bg-[url('/fridge/paper.png')] bg-contain bg-top bg-no-repeat ${SHEET_INSET} ${rotate} ${className}`}
+        className={`paper-shadow relative aspect-[275/350] bg-[url('/fridge/paper.png')] bg-contain bg-top bg-no-repeat ${SHEET_INSET} ${className}`}
       >
         {/* aspect-[275/350] matches paper.png's own dimensions -- it's a
             finished graphic of one torn notepad sheet with its own
